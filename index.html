@@ -1,132 +1,158 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>AI SaaS Tools</title>
+<title>SaaS Platform</title>
 <style>
-body {
-  margin:0;
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-}
-.container {
-  max-width: 1100px;
-  margin: auto;
-  padding: 20px;
-}
-h1 {
-  text-align:center;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
-  gap:20px;
-}
-.card {
-  background:#1e293b;
-  padding:20px;
-  border-radius:12px;
-  box-shadow:0 0 10px rgba(0,0,0,0.3);
-}
-button {
-  background:#6366f1;
-  color:white;
-  border:none;
-  padding:10px;
-  margin-top:10px;
-  cursor:pointer;
-}
-input {
-  width:100%;
-  margin-top:10px;
-}
+body { background:#0f172a; color:white; font-family:Arial; }
+.container { max-width:1200px; margin:auto; padding:20px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; }
+.card { background:#1e293b; padding:20px; border-radius:12px; }
+button { background:#6366f1; color:white; padding:10px; border:none; cursor:pointer; }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-<h1>🚀 AI SaaS Tools</h1>
+<h1>🚀 SaaS Dashboard</h1>
 
 <!-- LOGIN -->
 <div class="card">
-<h3>Login</h3>
 <input id="email" placeholder="Email">
-<input id="password" placeholder="Password" type="password">
+<input id="password" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
+<button onclick="register()">Register</button>
 </div>
 
+<!-- TOOLS -->
 <div class="grid">
-
 <div class="card">
 <h3>Merge PDF</h3>
 <input type="file" id="pdfFiles" multiple>
-<button onclick="mergePDF()">Merge</button>
+<button onclick="mergePDF()">Run</button>
 </div>
 
 <div class="card">
 <h3>OCR</h3>
 <input type="file" id="ocrFile">
-<button onclick="runOCR()">Extract</button>
+<button onclick="runOCR()">Run</button>
 <p id="ocrResult"></p>
 </div>
 
+<div class="card">
+<h3>AI Excel</h3>
+<input type="file" id="excelFile">
+<button onclick="aiExcel()">Run</button>
+<p id="excelResult"></p>
+</div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="card">
+<h3>📊 Usage History</h3>
+<button onclick="loadDashboard()">Load</button>
+<ul id="history"></ul>
+</div>
+
+<!-- PAYMENT -->
+<div class="card">
+<h3>💰 Upgrade to Pro</h3>
+<button onclick="buy()">Subscribe</button>
 </div>
 
 </div>
 
 <script>
-const API = "http://localhost:5000/api";
+const API = "https://sudhanshu-backend-1937.onrender.com/api";
 let token = "";
 
-// LOGIN
+// AUTH
 async function login() {
-  const res = await fetch(API + "/auth/login", {
+  const res = await fetch(API+"/auth/login", {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      email: document.getElementById("email").value,
-      password: document.getElementById("password").value
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      email:email.value,
+      password:password.value
     })
   });
-
   const data = await res.json();
   token = data.token;
-  alert("Login Success");
+  alert("Logged in");
 }
 
-// MERGE PDF
-async function mergePDF() {
-  const files = document.getElementById("pdfFiles").files;
-  const form = new FormData();
-
-  for (let f of files) form.append("files", f);
-
-  const res = await fetch(API + "/tools/merge-pdf", {
+async function register() {
+  await fetch(API+"/auth/register", {
     method:"POST",
-    headers:{ "Authorization": token },
-    body: form
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      email:email.value,
+      password:password.value
+    })
+  });
+  alert("Registered");
+}
+
+// TOOLS
+async function mergePDF() {
+  const form = new FormData();
+  for (let f of pdfFiles.files) form.append("files", f);
+
+  const res = await fetch(API+"/tools/merge-pdf", {
+    method:"POST",
+    headers:{Authorization:token},
+    body:form
   });
 
-  const blob = await res.blob();
-  window.open(URL.createObjectURL(blob));
+  window.open(URL.createObjectURL(await res.blob()));
 }
 
-// OCR
 async function runOCR() {
-  const file = document.getElementById("ocrFile").files[0];
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", ocrFile.files[0]);
 
-  const res = await fetch(API + "/tools/ocr", {
+  const res = await fetch(API+"/tools/ocr", {
     method:"POST",
-    headers:{ "Authorization": token },
-    body: form
+    headers:{Authorization:token},
+    body:form
   });
 
   const data = await res.json();
-  document.getElementById("ocrResult").innerText = data.text;
+  ocrResult.innerText = data.text;
+}
+
+async function aiExcel() {
+  const form = new FormData();
+  form.append("file", excelFile.files[0]);
+
+  const res = await fetch(API+"/tools/excel-ai", {
+    method:"POST",
+    headers:{Authorization:token},
+    body:form
+  });
+
+  const data = await res.json();
+  excelResult.innerText = JSON.stringify(data);
+}
+
+// DASHBOARD
+async function loadDashboard() {
+  const res = await fetch(API+"/dashboard", {
+    headers:{Authorization:token}
+  });
+
+  const data = await res.json();
+  history.innerHTML = data.map(x => `<li>${x.tool}</li>`).join("");
+}
+
+// PAYMENT
+async function buy() {
+  const res = await fetch(API+"/payment/create-checkout", {
+    method:"POST"
+  });
+
+  const data = await res.json();
+  window.location = data.url;
 }
 </script>
 
