@@ -1,247 +1,134 @@
-import React, { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { ShieldCheck, FileText, History, Lock, Sparkles, Upload, Wand2, Search, UserCircle2, Clock3, CheckCircle2, AlertCircle, BarChart3, ChevronRight, LogIn, UserPlus } from "lucide-react";
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI SaaS Tools</title>
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+}
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 20px;
+}
+h1 {
+  text-align:center;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
+  gap:20px;
+}
+.card {
+  background:#1e293b;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
+}
+button {
+  background:#6366f1;
+  color:white;
+  border:none;
+  padding:10px;
+  margin-top:10px;
+  cursor:pointer;
+}
+input {
+  width:100%;
+  margin-top:10px;
+}
+</style>
+</head>
 
-const jobs = [
-  { id: "J-1042", tool: "PDF to Word + OCR", file: "invoice-apr.pdf", time: "2 mins ago", status: "Success" },
-  { id: "J-1041", tool: "Merge PDF", file: "gst-attachments.zip", time: "19 mins ago", status: "Success" },
-  { id: "J-1040", tool: "Compress PDF", file: "annual-report.pdf", time: "42 mins ago", status: "Success" },
-  { id: "J-1039", tool: "Protect PDF", file: "salary-sheet.pdf", time: "1 hr ago", status: "Failed" },
-];
+<body>
 
-const tools = [
-  "Merge PDF",
-  "Split PDF",
-  "Compress PDF",
-  "PDF to Word",
-  "PDF to Excel",
-  "OCR to Text",
-  "Protect PDF",
-  "Unlock PDF",
-  "Page Numbers",
-  "Watermark PDF",
-  "Rotate PDF",
-  "Delete Pages",
-];
+<div class="container">
 
-function Badge({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "success" | "danger" }) {
-  const cls = tone === "success"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : tone === "danger"
-    ? "bg-rose-50 text-rose-700 border-rose-200"
-    : "bg-orange-50 text-orange-700 border-orange-200";
-  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>{children}</span>;
+<h1>🚀 AI SaaS Tools</h1>
+
+<!-- LOGIN -->
+<div class="card">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="password" placeholder="Password" type="password">
+<button onclick="login()">Login</button>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<h3>Merge PDF</h3>
+<input type="file" id="pdfFiles" multiple>
+<button onclick="mergePDF()">Merge</button>
+</div>
+
+<div class="card">
+<h3>OCR</h3>
+<input type="file" id="ocrFile">
+<button onclick="runOCR()">Extract</button>
+<p id="ocrResult"></p>
+</div>
+
+</div>
+
+</div>
+
+<script>
+const API = "http://localhost:5000/api";
+let token = "";
+
+// LOGIN
+async function login() {
+  const res = await fetch(API + "/auth/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value
+    })
+  });
+
+  const data = await res.json();
+  token = data.token;
+  alert("Login Success");
 }
 
-function StatCard({ title, value, icon: Icon }: { title: string; value: string; icon: any }) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm text-slate-500">{title}</div>
-          <div className="mt-2 text-3xl font-black tracking-tight text-slate-900">{value}</div>
-        </div>
-        <div className="rounded-2xl bg-orange-50 p-3 text-orange-600">
-          <Icon className="h-6 w-6" />
-        </div>
-      </div>
-    </div>
-  );
+// MERGE PDF
+async function mergePDF() {
+  const files = document.getElementById("pdfFiles").files;
+  const form = new FormData();
+
+  for (let f of files) form.append("files", f);
+
+  const res = await fetch(API + "/tools/merge-pdf", {
+    method:"POST",
+    headers:{ "Authorization": token },
+    body: form
+  });
+
+  const blob = await res.blob();
+  window.open(URL.createObjectURL(blob));
 }
 
-function LoginPanel() {
-  return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="rounded-2xl bg-orange-100 p-3 text-orange-700"><UserCircle2 className="h-5 w-5" /></div>
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">Login to your workspace</h3>
-          <p className="text-sm text-slate-500">Track jobs, history, and private processing status.</p>
-        </div>
-      </div>
-      <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
-          <input className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none ring-0 transition focus:border-orange-400" placeholder="name@company.com" />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">Password</label>
-          <input type="password" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none ring-0 transition focus:border-orange-400" placeholder="••••••••" />
-        </div>
-        <button className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white transition hover:bg-slate-800">
-          <LogIn className="h-4 w-4" /> Login
-        </button>
-        <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
-          <UserPlus className="h-4 w-4" /> Create account
-        </button>
-        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-          Recommended model: save only job history and metadata, not uploaded files.
-        </div>
-      </div>
-    </div>
-  );
+// OCR
+async function runOCR() {
+  const file = document.getElementById("ocrFile").files[0];
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(API + "/tools/ocr", {
+    method:"POST",
+    headers:{ "Authorization": token },
+    body: form
+  });
+
+  const data = await res.json();
+  document.getElementById("ocrResult").innerText = data.text;
 }
+</script>
 
-function HistoryTable() {
-  return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">Recent jobs</h3>
-          <p className="text-sm text-slate-500">User-wise history after login.</p>
-        </div>
-        <div className="relative w-64 max-w-full">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input className="w-full rounded-2xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-orange-400" placeholder="Search jobs" />
-        </div>
-      </div>
-      <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <div className="grid grid-cols-12 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-          <div className="col-span-2">Job ID</div>
-          <div className="col-span-3">Tool</div>
-          <div className="col-span-3">File</div>
-          <div className="col-span-2">Time</div>
-          <div className="col-span-2">Status</div>
-        </div>
-        {jobs.map((job) => (
-          <div key={job.id} className="grid grid-cols-12 items-center border-t border-slate-200 px-4 py-4 text-sm text-slate-700">
-            <div className="col-span-2 font-semibold">{job.id}</div>
-            <div className="col-span-3">{job.tool}</div>
-            <div className="col-span-3 truncate">{job.file}</div>
-            <div className="col-span-2 text-slate-500">{job.time}</div>
-            <div className="col-span-2">
-              {job.status === "Success" ? <Badge tone="success">Success</Badge> : <Badge tone="danger">Failed</Badge>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ToolGrid() {
-  return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">Popular tools</h3>
-          <p className="text-sm text-slate-500">Simple, premium cards that attract first-time users.</p>
-        </div>
-        <button className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">View all tools</button>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {tools.map((tool, i) => (
-          <motion.div
-            key={tool}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03 }}
-            className="group rounded-3xl border border-slate-200 p-5 transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="rounded-2xl bg-orange-50 p-3 text-orange-600"><FileText className="h-5 w-5" /></div>
-              <Badge>{i < 6 ? "Popular" : "Fast"}</Badge>
-            </div>
-            <h4 className="mt-4 text-lg font-bold text-slate-900">{tool}</h4>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Fast, secure processing with user history after login and optional OCR where needed.</p>
-            <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-orange-700">
-              Open tool <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default function CAHelperAuthUiRedesign() {
-  const [tab, setTab] = useState<"landing" | "dashboard">("landing");
-  const features = useMemo(() => [
-    { icon: ShieldCheck, title: "Private processing", text: "Save only per-user history metadata while auto-deleting uploaded files after processing." },
-    { icon: History, title: "User-wise history", text: "Every logged-in user sees their own jobs, statuses, and favorite tools." },
-    { icon: Wand2, title: "OCR-ready workflows", text: "Scanned PDF to Word and Excel with premium UI and guided actions." },
-  ], []);
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-orange-500 p-2.5 text-white"><Sparkles className="h-5 w-5" /></div>
-            <div>
-              <div className="text-lg font-black tracking-tight">CAHELPER</div>
-              <div className="text-xs text-slate-500">Login, history, and premium PDF workflows</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-2xl bg-slate-100 p-1">
-            <button onClick={() => setTab("landing")} className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === "landing" ? "bg-white shadow-sm" : "text-slate-600"}`}>Landing</button>
-            <button onClick={() => setTab("dashboard")} className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === "dashboard" ? "bg-white shadow-sm" : "text-slate-600"}`}>Dashboard</button>
-          </div>
-        </div>
-      </div>
-
-      {tab === "landing" ? (
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700">
-                <Lock className="h-4 w-4" /> Secure sign-in + history
-              </div>
-              <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950">A PDF platform people actually want to use</h1>
-              <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-                Redesign CAHELPER with a premium interface, login-based workspace, and clean job history for each person. Keep your privacy-first approach by saving job logs without storing actual files.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button className="rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white hover:bg-slate-800">Start free</button>
-                <button className="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50">See dashboard</button>
-              </div>
-              <div className="mt-10 grid gap-4 md:grid-cols-3">
-                {features.map((f) => (
-                  <div key={f.title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="rounded-2xl bg-orange-50 p-3 text-orange-600 w-fit"><f.icon className="h-5 w-5" /></div>
-                    <div className="mt-4 text-lg font-bold">{f.title}</div>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">{f.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <LoginPanel />
-          </div>
-
-          <div className="mt-10 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="grid gap-5">
-              <StatCard title="Files processed" value="18,420" icon={Upload} />
-              <StatCard title="Saved job history" value="2,184" icon={History} />
-              <StatCard title="Success rate" value="99.2%" icon={CheckCircle2} />
-            </div>
-            <ToolGrid />
-          </div>
-        </div>
-      ) : (
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <div className="space-y-6">
-              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">Welcome back, Sudhanshu</h3>
-                    <p className="text-sm text-slate-500">Your private workspace with user-specific history.</p>
-                  </div>
-                  <Badge tone="success">Files auto-delete</Badge>
-                </div>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <StatCard title="Recent jobs" value="24" icon={Clock3} />
-                  <StatCard title="Failed jobs" value="1" icon={AlertCircle} />
-                  <StatCard title="Most used" value="OCR Excel" icon={BarChart3} />
-                  <StatCard title="Saved logs" value="Metadata only" icon={ShieldCheck} />
-                </div>
-              </div>
-              <ToolGrid />
-            </div>
-            <HistoryTable />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+</body>
+</html>
