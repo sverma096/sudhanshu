@@ -1,464 +1,247 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CAHELPER - PDF Tools</title>
-  <style>
-    :root{
-      --bg:#f6f7fb;--panel:#ffffff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
-      --brand:#f97316;--brand2:#ea580c;--dark:#0f172a;--shadow:0 14px 34px rgba(15,23,42,.08);--radius:18px;
-      --okbg:#ecfdf5;--ok:#047857;--okline:#a7f3d0;--soonbg:#f8fafc;--soon:#64748b;--soonline:#cbd5e1;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
-    .topbar{background:linear-gradient(135deg,#111827,#0f172a);color:#fff;padding:22px 0;position:sticky;top:0;z-index:20;box-shadow:0 4px 18px rgba(0,0,0,.15)}
-    .wrap{max-width:1280px;margin:0 auto;padding:0 20px}
-    .toprow{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
-    .brand h1{margin:0;font-size:30px;letter-spacing:.4px}
-    .brand p{margin:6px 0 0;color:#cbd5e1;font-size:14px}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(249,115,22,.13);border:1px solid rgba(249,115,22,.35);color:#fed7aa;font-size:13px;font-weight:700}
-    .hero{padding:24px 0 16px}
-    .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
-    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .hero-card{padding:24px}
-    .hero-card h2{margin:0 0 12px;font-size:33px;line-height:1.05}
-    .hero-card p{margin:0;color:var(--muted);line-height:1.6}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center}
-    .stat strong{display:block;font-size:24px;color:var(--brand2)}
-    .stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-    .main{display:grid;grid-template-columns:360px 1fr;gap:20px;padding:8px 0 30px}
-    .sidebar,.workspace{padding:18px}
-    h3{margin:0 0 14px}
-    .dropzone{border:2px dashed #cbd5e1;border-radius:18px;background:#fafafa;text-align:center;padding:22px;cursor:pointer;transition:.2s ease}
-    .dropzone.dragover{background:#fff7ed;border-color:var(--brand)}
-    .dropzone input{display:none}
-    .dz-icon{font-size:36px;display:block;margin-bottom:8px}
-    .muted{color:var(--muted)}
-    .files{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:170px;overflow:auto}
-    .file{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:13px}
-    .controls{margin-top:14px;display:flex;flex-direction:column;gap:12px}
-    label{display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:6px}
-    input[type="text"],input[type="password"],textarea,select{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px 14px;font-size:14px;background:#fff}
-    textarea{min-height:88px;resize:vertical}
-    .btn{border:none;border-radius:14px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;transition:.15s ease}
-    .btn-primary{background:var(--brand);color:#fff}
-    .btn-primary:hover{background:var(--brand2)}
-    .btn-light{background:#fff;border:1px solid var(--line)}
-    .progress{width:100%;height:14px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin:8px 0}
-    .progress > div{height:100%;width:0%;background:linear-gradient(90deg,var(--brand),#fb923c);transition:width .2s ease}
-    .statusbox{margin-top:14px;border:1px solid var(--line);border-radius:16px;background:#fff;padding:16px;font-size:13px;color:var(--muted);line-height:1.6}
-    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-    .toolbar input{max-width:320px}
-    .notice{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.55;margin-bottom:14px}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-    .tool{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;cursor:pointer;box-shadow:var(--shadow);transition:.16s ease;position:relative}
-    .tool:hover{transform:translateY(-2px)}
-    .tool.active{border:2px solid var(--brand);background:#fffaf5}
-    .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;border:1px solid}
-    .badge.live{background:var(--okbg);color:var(--ok);border-color:var(--okline)}
-    .badge.soon{background:var(--soonbg);color:var(--soon);border-color:var(--soonline)}
-    .cat{display:inline-block;margin-top:10px;font-size:11px;color:var(--brand2);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-    .tool h4{margin:10px 0 8px;font-size:16px}
-    .tool p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
-    .footer{text-align:center;color:#64748b;font-size:13px;padding:0 0 30px}
-    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .hidden{display:none !important}
-    .subtle{font-size:12px;color:var(--muted)}
-    @media (max-width:1100px){.hero-grid,.main{grid-template-columns:1fr}.grid{grid-template-columns:repeat(3,1fr)}}
-    @media (max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}}
-    @media (max-width:520px){.grid,.stats{grid-template-columns:1fr}}
-  </style>
-</head>
-<body>
-  <header class="topbar">
-    <div class="wrap toprow">
-      <div class="brand">
-        <h1>CAHELPER</h1>
-        <p>Single-page SaaS frontend for 35 PDF tools with hidden backend support and dynamic tool options.</p>
-      </div>
-      <div class="pill">🔒 Backend URL hidden by default</div>
-    </div>
-  </header>
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { ShieldCheck, FileText, History, Lock, Sparkles, Upload, Wand2, Search, UserCircle2, Clock3, CheckCircle2, AlertCircle, BarChart3, ChevronRight, LogIn, UserPlus } from "lucide-react";
 
-  <section class="hero">
-    <div class="wrap hero-grid">
-      <div class="panel hero-card">
-        <h2>35 PDF tools in one single HTML file</h2>
-        <p>This version hides the backend URL field by default, uses same-origin automatically, and shows only the options required for the selected tool. Live tools are connected to your backend routes. Other tools remain in the UI as placeholders for later expansion.</p>
-      </div>
-      <div class="stats">
-        <div class="stat"><strong>35</strong><span>Tools Listed</span></div>
-        <div class="stat"><strong>24</strong><span>Live Routes</span></div>
-        <div class="stat"><strong>11</strong><span>Coming Soon</span></div>
-        <div class="stat"><strong>OCR</strong><span>Enabled</span></div>
-        <div class="stat"><strong>1 File</strong><span>Frontend</span></div>
-        <div class="stat"><strong>Auto</strong><span>Same-Origin</span></div>
-      </div>
-    </div>
-  </section>
+const jobs = [
+  { id: "J-1042", tool: "PDF to Word + OCR", file: "invoice-apr.pdf", time: "2 mins ago", status: "Success" },
+  { id: "J-1041", tool: "Merge PDF", file: "gst-attachments.zip", time: "19 mins ago", status: "Success" },
+  { id: "J-1040", tool: "Compress PDF", file: "annual-report.pdf", time: "42 mins ago", status: "Success" },
+  { id: "J-1039", tool: "Protect PDF", file: "salary-sheet.pdf", time: "1 hr ago", status: "Failed" },
+];
 
-  <main class="wrap main">
-    <aside class="panel sidebar">
-      <h3>Run Selected Tool</h3>
-      <div class="dropzone" id="dropzone">
-        <span class="dz-icon">📄</span>
-        <strong>Drag & drop files here</strong>
-        <div class="muted" style="margin-top:6px">or click to browse</div>
-        <input id="fileInput" type="file" multiple />
-      </div>
-      <div id="filesList" class="files"></div>
+const tools = [
+  "Merge PDF",
+  "Split PDF",
+  "Compress PDF",
+  "PDF to Word",
+  "PDF to Excel",
+  "OCR to Text",
+  "Protect PDF",
+  "Unlock PDF",
+  "Page Numbers",
+  "Watermark PDF",
+  "Rotate PDF",
+  "Delete Pages",
+];
 
-      <div class="controls">
-        <div id="backendWrap" class="hidden">
-          <label for="backendUrl">Backend URL</label>
-          <input id="backendUrl" type="text" placeholder="Leave blank for same-origin" />
-          <div class="subtle">This stays hidden unless you enable manual backend mode in code.</div>
-        </div>
+function Badge({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "success" | "danger" }) {
+  const cls = tone === "success"
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : tone === "danger"
+    ? "bg-rose-50 text-rose-700 border-rose-200"
+    : "bg-orange-50 text-orange-700 border-orange-200";
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>{children}</span>;
+}
 
+function StatCard({ title, value, icon: Icon }: { title: string; value: string; icon: any }) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
         <div>
-          <label for="selectedTool">Selected Tool</label>
-          <select id="selectedTool"></select>
+          <div className="text-sm text-slate-500">{title}</div>
+          <div className="mt-2 text-3xl font-black tracking-tight text-slate-900">{value}</div>
         </div>
-
-        <div id="pageWrap">
-          <label for="pageRange">Page range / order</label>
-          <input id="pageRange" type="text" placeholder="1-3,5 or 3,1,2" />
+        <div className="rounded-2xl bg-orange-50 p-3 text-orange-600">
+          <Icon className="h-6 w-6" />
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div id="rotationWrap">
-          <label for="rotation">Rotation</label>
-          <select id="rotation">
-            <option value="90">90°</option>
-            <option value="180">180°</option>
-            <option value="270">270°</option>
-          </select>
+function LoginPanel() {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="rounded-2xl bg-orange-100 p-3 text-orange-700"><UserCircle2 className="h-5 w-5" /></div>
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">Login to your workspace</h3>
+          <p className="text-sm text-slate-500">Track jobs, history, and private processing status.</p>
         </div>
-
-        <div id="watermarkWrap">
-          <label for="watermarkText">Watermark text</label>
-          <input id="watermarkText" type="text" value="CAHELPER" />
+      </div>
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+          <input className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none ring-0 transition focus:border-orange-400" placeholder="name@company.com" />
         </div>
-
-        <div id="passwordWrap">
-          <label for="password">Password</label>
-          <input id="password" type="password" placeholder="For protect / unlock" />
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Password</label>
+          <input type="password" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none ring-0 transition focus:border-orange-400" placeholder="••••••••" />
         </div>
-
-        <div id="outputWrap">
-          <label for="outputName">Output name</label>
-          <input id="outputName" type="text" placeholder="Optional file name" />
+        <button className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 font-semibold text-white transition hover:bg-slate-800">
+          <LogIn className="h-4 w-4" /> Login
+        </button>
+        <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+          <UserPlus className="h-4 w-4" /> Create account
+        </button>
+        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+          Recommended model: save only job history and metadata, not uploaded files.
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div id="customWrap">
-          <label for="customText">Custom HTML / Markdown / extra text</label>
-          <textarea id="customText" placeholder="Used later for tools like HTML to PDF or Markdown to PDF"></textarea>
+function HistoryTable() {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">Recent jobs</h3>
+          <p className="text-sm text-slate-500">User-wise history after login.</p>
         </div>
+        <div className="relative w-64 max-w-full">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input className="w-full rounded-2xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-orange-400" placeholder="Search jobs" />
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200">
+        <div className="grid grid-cols-12 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+          <div className="col-span-2">Job ID</div>
+          <div className="col-span-3">Tool</div>
+          <div className="col-span-3">File</div>
+          <div className="col-span-2">Time</div>
+          <div className="col-span-2">Status</div>
+        </div>
+        {jobs.map((job) => (
+          <div key={job.id} className="grid grid-cols-12 items-center border-t border-slate-200 px-4 py-4 text-sm text-slate-700">
+            <div className="col-span-2 font-semibold">{job.id}</div>
+            <div className="col-span-3">{job.tool}</div>
+            <div className="col-span-3 truncate">{job.file}</div>
+            <div className="col-span-2 text-slate-500">{job.time}</div>
+            <div className="col-span-2">
+              {job.status === "Success" ? <Badge tone="success">Success</Badge> : <Badge tone="danger">Failed</Badge>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-        <button class="btn btn-primary" id="runBtn">Run Tool</button>
-        <button class="btn btn-light" id="clearBtn" type="button">Clear Files</button>
+function ToolGrid() {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">Popular tools</h3>
+          <p className="text-sm text-slate-500">Simple, premium cards that attract first-time users.</p>
+        </div>
+        <button className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">View all tools</button>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {tools.map((tool, i) => (
+          <motion.div
+            key={tool}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.03 }}
+            className="group rounded-3xl border border-slate-200 p-5 transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="rounded-2xl bg-orange-50 p-3 text-orange-600"><FileText className="h-5 w-5" /></div>
+              <Badge>{i < 6 ? "Popular" : "Fast"}</Badge>
+            </div>
+            <h4 className="mt-4 text-lg font-bold text-slate-900">{tool}</h4>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Fast, secure processing with user history after login and optional OCR where needed.</p>
+            <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-orange-700">
+              Open tool <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function CAHelperAuthUiRedesign() {
+  const [tab, setTab] = useState<"landing" | "dashboard">("landing");
+  const features = useMemo(() => [
+    { icon: ShieldCheck, title: "Private processing", text: "Save only per-user history metadata while auto-deleting uploaded files after processing." },
+    { icon: History, title: "User-wise history", text: "Every logged-in user sees their own jobs, statuses, and favorite tools." },
+    { icon: Wand2, title: "OCR-ready workflows", text: "Scanned PDF to Word and Excel with premium UI and guided actions." },
+  ], []);
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-orange-500 p-2.5 text-white"><Sparkles className="h-5 w-5" /></div>
+            <div>
+              <div className="text-lg font-black tracking-tight">CAHELPER</div>
+              <div className="text-xs text-slate-500">Login, history, and premium PDF workflows</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-2xl bg-slate-100 p-1">
+            <button onClick={() => setTab("landing")} className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === "landing" ? "bg-white shadow-sm" : "text-slate-600"}`}>Landing</button>
+            <button onClick={() => setTab("dashboard")} className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === "dashboard" ? "bg-white shadow-sm" : "text-slate-600"}`}>Dashboard</button>
+          </div>
+        </div>
       </div>
 
-      <div class="statusbox">
-        <strong>Status</strong>
-        <div class="progress"><div id="progressFill"></div></div>
-        <div id="statusText">Ready.</div>
-        <div id="statusSub">Choose a tool and upload files.</div>
-      </div>
-    </aside>
+      {tab === "landing" ? (
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700">
+                <Lock className="h-4 w-4" /> Secure sign-in + history
+              </div>
+              <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-950">A PDF platform people actually want to use</h1>
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
+                Redesign CAHELPER with a premium interface, login-based workspace, and clean job history for each person. Keep your privacy-first approach by saving job logs without storing actual files.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <button className="rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white hover:bg-slate-800">Start free</button>
+                <button className="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50">See dashboard</button>
+              </div>
+              <div className="mt-10 grid gap-4 md:grid-cols-3">
+                {features.map((f) => (
+                  <div key={f.title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="rounded-2xl bg-orange-50 p-3 text-orange-600 w-fit"><f.icon className="h-5 w-5" /></div>
+                    <div className="mt-4 text-lg font-bold">{f.title}</div>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">{f.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <LoginPanel />
+          </div>
 
-    <section class="panel workspace">
-      <div class="toolbar">
-        <h3 style="margin:0">All Tools</h3>
-        <input id="searchInput" type="text" placeholder="Search tools..." />
-      </div>
-
-      <div class="notice">
-        The page uses same-origin by default, so your backend URL is hidden from normal users. Live tools call your existing backend routes. Tool-specific fields appear only when needed.
-      </div>
-
-      <div id="toolsGrid" class="grid"></div>
-    </section>
-  </main>
-
-  <div class="wrap footer">
-    Save as <strong>index.html</strong>. To truly hide backend infrastructure from users, route requests through same-origin rewrites or reverse proxy rules.
-  </div>
-
-  <script>
-    const USE_MANUAL_BACKEND_FIELD = false;
-
-    const tools = [
-      {key:"merge", name:"Merge PDF", cat:"Organize", live:true, route:"/merge", desc:"Combine multiple PDFs into one file.", opts:[]},
-      {key:"split", name:"Split PDF", cat:"Organize", live:true, route:"/split", desc:"Split PDF page by page.", opts:[]},
-      {key:"extract", name:"Extract Pages", cat:"Organize", live:true, route:"/extract", desc:"Extract selected pages.", opts:["pageRange"]},
-      {key:"delete-pages", name:"Delete Pages", cat:"Organize", live:true, route:"/delete-pages", desc:"Remove selected pages from PDF.", opts:["pageRange"]},
-      {key:"reorder", name:"Reorder Pages", cat:"Organize", live:true, route:"/reorder", desc:"Reorder pages using a page list.", opts:["pageRange"]},
-      {key:"rotate", name:"Rotate PDF", cat:"Edit", live:true, route:"/rotate", desc:"Rotate all pages by 90, 180, or 270 degrees.", opts:["rotation"]},
-      {key:"watermark", name:"Add Watermark", cat:"Edit", live:true, route:"/watermark", desc:"Add text watermark on each page.", opts:["watermarkText"]},
-      {key:"page-numbers", name:"Add Page Numbers", cat:"Edit", live:true, route:"/page-numbers", desc:"Stamp page numbers on PDF.", opts:[]},
-      {key:"image-to-pdf", name:"Image to PDF", cat:"Convert", live:true, route:"/image-to-pdf", desc:"Convert images to a single PDF.", opts:[]},
-      {key:"jpg-to-pdf", name:"JPG to PDF", cat:"Convert", live:true, route:"/jpg-to-pdf", desc:"Convert JPG files to PDF.", opts:[]},
-      {key:"pdf-to-word", name:"PDF to Word", cat:"Convert", live:true, route:"/pdf-to-word", desc:"Convert PDF into editable DOCX.", opts:["outputName"]},
-      {key:"pdf-to-excel", name:"PDF to Excel", cat:"Convert", live:true, route:"/pdf-to-excel", desc:"Extract tables/text into XLSX.", opts:["outputName"]},
-      {key:"pdf-to-text", name:"PDF to Text", cat:"Convert", live:true, route:"/pdf-to-text", desc:"Extract plain text from PDF.", opts:["outputName"]},
-      {key:"ocr-word", name:"PDF to Word + OCR", cat:"OCR", live:true, route:"/ocr-word", desc:"OCR scanned PDFs to DOCX.", opts:["outputName"]},
-      {key:"ocr-excel", name:"PDF to Excel + OCR", cat:"OCR", live:true, route:"/ocr-excel", desc:"OCR scanned PDFs to XLSX.", opts:["outputName"]},
-      {key:"ocr-text", name:"PDF to Text + OCR", cat:"OCR", live:true, route:"/ocr-text", desc:"OCR scanned PDFs to TXT.", opts:["outputName"]},
-      {key:"compress", name:"Compress PDF", cat:"Optimize", live:true, route:"/compress", desc:"Reduce PDF size.", opts:["outputName"]},
-      {key:"grayscale", name:"Grayscale PDF", cat:"Edit", live:true, route:"/grayscale", desc:"Convert PDF pages to grayscale output.", opts:["outputName"]},
-      {key:"protect", name:"Protect PDF", cat:"Security", live:true, route:"/protect", desc:"Add password protection.", opts:["password"]},
-      {key:"unlock", name:"Unlock PDF", cat:"Security", live:true, route:"/unlock", desc:"Unlock PDF using password.", opts:["password"]},
-      {key:"word-count", name:"Word Count", cat:"Analyze", live:true, route:"/word-count", desc:"Count words and characters.", opts:["outputName"]},
-      {key:"metadata", name:"View Metadata", cat:"Analyze", live:true, route:"/metadata", desc:"Export PDF metadata as JSON.", opts:["outputName"]},
-      {key:"pdf-to-jpg", name:"PDF to JPG", cat:"Convert", live:true, route:"/pdf-to-jpg", desc:"Convert pages to JPG images.", opts:["outputName"]},
-      {key:"thumbnails", name:"Generate Thumbnails", cat:"Analyze", live:true, route:"/thumbnails", desc:"Create thumbnail images for PDF pages.", opts:["outputName"]},
-      {key:"blank", name:"Create Blank PDF", cat:"Create", live:true, route:"/blank", desc:"Create a blank PDF.", opts:["outputName"]},
-
-      {key:"pdf-to-ppt", name:"PDF to PPT", cat:"Convert", live:false, route:"/pdf-to-ppt", desc:"Convert PDF into PPTX.", opts:["outputName"]},
-      {key:"crop", name:"Crop PDF", cat:"Edit", live:false, route:"/crop", desc:"Crop page margins.", opts:["pageRange"]},
-      {key:"resize", name:"Resize PDF", cat:"Edit", live:false, route:"/resize", desc:"Resize PDF pages.", opts:["outputName"]},
-      {key:"redact", name:"Redact PDF", cat:"Security", live:false, route:"/redact", desc:"Permanently remove sensitive information.", opts:["pageRange"]},
-      {key:"sign", name:"Sign PDF", cat:"Security", live:false, route:"/sign", desc:"Add digital signature workflow.", opts:["outputName"]},
-      {key:"flatten", name:"Flatten PDF", cat:"Security", live:false, route:"/flatten", desc:"Flatten annotations/forms.", opts:["outputName"]},
-      {key:"compare", name:"Compare PDF", cat:"Analyze", live:false, route:"/compare", desc:"Compare two PDFs.", opts:["outputName"]},
-      {key:"html-to-pdf", name:"HTML to PDF", cat:"Create", live:false, route:"/html-to-pdf", desc:"Convert HTML into PDF.", opts:["customText","outputName"]},
-      {key:"markdown-to-pdf", name:"Markdown to PDF", cat:"Create", live:false, route:"/markdown-to-pdf", desc:"Convert Markdown into PDF.", opts:["customText","outputName"]},
-      {key:"zip-to-pdf", name:"ZIP to PDF", cat:"Create", live:false, route:"/zip-to-pdf", desc:"Build a PDF from packaged assets.", opts:["outputName"]},
-      {key:"pdf-repair", name:"Repair PDF", cat:"Optimize", live:false, route:"/repair", desc:"Repair damaged PDF structure.", opts:["outputName"]}
-    ];
-
-    const els = {
-      backendWrap: document.getElementById("backendWrap"),
-      dropzone: document.getElementById("dropzone"),
-      fileInput: document.getElementById("fileInput"),
-      filesList: document.getElementById("filesList"),
-      backendUrl: document.getElementById("backendUrl"),
-      selectedTool: document.getElementById("selectedTool"),
-      pageWrap: document.getElementById("pageWrap"),
-      rotationWrap: document.getElementById("rotationWrap"),
-      watermarkWrap: document.getElementById("watermarkWrap"),
-      passwordWrap: document.getElementById("passwordWrap"),
-      outputWrap: document.getElementById("outputWrap"),
-      customWrap: document.getElementById("customWrap"),
-      pageRange: document.getElementById("pageRange"),
-      rotation: document.getElementById("rotation"),
-      watermarkText: document.getElementById("watermarkText"),
-      password: document.getElementById("password"),
-      outputName: document.getElementById("outputName"),
-      customText: document.getElementById("customText"),
-      runBtn: document.getElementById("runBtn"),
-      clearBtn: document.getElementById("clearBtn"),
-      searchInput: document.getElementById("searchInput"),
-      toolsGrid: document.getElementById("toolsGrid"),
-      progressFill: document.getElementById("progressFill"),
-      statusText: document.getElementById("statusText"),
-      statusSub: document.getElementById("statusSub")
-    };
-
-    let selectedFiles = [];
-
-    function setStatus(progress, text, sub) {
-      els.progressFill.style.width = Math.max(0, Math.min(100, progress)) + "%";
-      if (text !== undefined) els.statusText.textContent = text;
-      if (sub !== undefined) els.statusSub.textContent = sub;
-    }
-
-    function fmtSize(bytes) {
-      if (bytes == null) return "";
-      const units = ["B","KB","MB","GB"];
-      let val = bytes, i = 0;
-      while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
-      return val.toFixed(val >= 100 ? 0 : 1) + " " + units[i];
-    }
-
-    function updateFilesUI() {
-      els.filesList.innerHTML = "";
-      if (!selectedFiles.length) {
-        els.filesList.innerHTML = '<div class="muted">No files selected.</div>';
-        return;
-      }
-      selectedFiles.forEach((file, idx) => {
-        const div = document.createElement("div");
-        div.className = "file";
-        div.innerHTML = "<span>" + (idx + 1) + ". " + file.name + "</span><strong>" + fmtSize(file.size) + "</strong>";
-        els.filesList.appendChild(div);
-      });
-    }
-
-    function renderSelect() {
-      els.selectedTool.innerHTML = tools.map(t =>
-        '<option value="' + t.key + '">' + t.name + (t.live ? "" : " (coming soon)") + '</option>'
-      ).join("");
-    }
-
-    function renderTools(filter) {
-      const q = (filter || "").trim().toLowerCase();
-      els.toolsGrid.innerHTML = "";
-      tools.filter(t => !q || t.name.toLowerCase().includes(q) || t.cat.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q))
-      .forEach(tool => {
-        const card = document.createElement("div");
-        card.className = "tool" + (els.selectedTool.value === tool.key ? " active" : "");
-        card.innerHTML =
-          '<div class="badge ' + (tool.live ? 'live' : 'soon') + '">' + (tool.live ? 'Live' : 'Coming Soon') + '</div>' +
-          '<div class="cat">' + tool.cat + '</div>' +
-          '<h4>' + tool.name + '</h4>' +
-          '<p>' + tool.desc + '</p>';
-        card.onclick = () => {
-          els.selectedTool.value = tool.key;
-          applyToolOptions();
-          renderTools(els.searchInput.value);
-        };
-        els.toolsGrid.appendChild(card);
-      });
-    }
-
-    function getCurrentTool() {
-      return tools.find(t => t.key === els.selectedTool.value);
-    }
-
-    function setVisible(el, yes) {
-      el.classList.toggle("hidden", !yes);
-    }
-
-    function applyToolOptions() {
-      const tool = getCurrentTool();
-      const opts = tool ? tool.opts || [] : [];
-      setVisible(els.backendWrap, USE_MANUAL_BACKEND_FIELD);
-      setVisible(els.pageWrap, opts.includes("pageRange"));
-      setVisible(els.rotationWrap, opts.includes("rotation"));
-      setVisible(els.watermarkWrap, opts.includes("watermarkText"));
-      setVisible(els.passwordWrap, opts.includes("password"));
-      setVisible(els.outputWrap, opts.includes("outputName"));
-      setVisible(els.customWrap, opts.includes("customText"));
-
-      const needsFiles = tool && tool.key !== "blank";
-      els.dropzone.style.opacity = needsFiles ? "1" : ".6";
-      els.dropzone.style.pointerEvents = needsFiles ? "auto" : "none";
-      if (!needsFiles) {
-        selectedFiles = [];
-        els.fileInput.value = "";
-        updateFilesUI();
-      }
-    }
-
-    function getBaseUrl() {
-      if (USE_MANUAL_BACKEND_FIELD) {
-        const raw = (els.backendUrl.value || "").trim();
-        return raw ? raw.replace(/\/+$/, "") : "";
-      }
-      return "";
-    }
-
-    function filenameFromDisposition(headerValue, fallback) {
-      if (!headerValue) return fallback;
-      const match = headerValue.match(/filename="?([^"]+)"?/i);
-      return match && match[1] ? match[1] : fallback;
-    }
-
-    async function runTool() {
-      const tool = getCurrentTool();
-      if (!tool) return;
-
-      if (!tool.live) {
-        alert("This tool UI is included, but the backend route is not implemented yet.");
-        return;
-      }
-      if (tool.key !== "blank" && !selectedFiles.length) {
-        alert("Please upload file(s) first.");
-        return;
-      }
-
-      const formData = new FormData();
-      selectedFiles.forEach(f => formData.append("files", f));
-      if (selectedFiles[0]) formData.append("file", selectedFiles[0]);
-      formData.append("pageRange", els.pageRange.value.trim());
-      formData.append("rotation", els.rotation.value);
-      formData.append("watermarkText", els.watermarkText.value);
-      formData.append("password", els.password.value);
-      formData.append("outputName", els.outputName.value);
-      formData.append("customText", els.customText.value);
-
-      const base = getBaseUrl();
-      const url = (base || "") + tool.route;
-
-      try {
-        setStatus(10, "Uploading...", tool.name);
-        const res = await fetch(url, { method: "POST", body: formData });
-        if (!res.ok) {
-          const errText = await res.text().catch(() => "Request failed");
-          throw new Error(errText || "Request failed");
-        }
-        setStatus(75, "Preparing download...", tool.name);
-
-        const blob = await res.blob();
-        const guessedName = (els.outputName.value || "").trim() || (tool.key + "-output");
-        const fileName = filenameFromDisposition(res.headers.get("Content-Disposition"), guessedName);
-
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          URL.revokeObjectURL(a.href);
-          a.remove();
-        }, 1200);
-
-        setStatus(100, "Done", "Downloaded: " + fileName);
-      } catch (err) {
-        setStatus(0, "Error", err.message || "Something went wrong");
-      }
-    }
-
-    els.dropzone.addEventListener("click", () => {
-      const tool = getCurrentTool();
-      if (tool && tool.key !== "blank") els.fileInput.click();
-    });
-    els.dropzone.addEventListener("dragover", e => {
-      const tool = getCurrentTool();
-      if (tool && tool.key !== "blank") {
-        e.preventDefault();
-        els.dropzone.classList.add("dragover");
-      }
-    });
-    els.dropzone.addEventListener("dragleave", () => {
-      els.dropzone.classList.remove("dragover");
-    });
-    els.dropzone.addEventListener("drop", e => {
-      const tool = getCurrentTool();
-      if (tool && tool.key !== "blank") {
-        e.preventDefault();
-        els.dropzone.classList.remove("dragover");
-        selectedFiles = Array.from(e.dataTransfer.files || []);
-        updateFilesUI();
-      }
-    });
-
-    els.fileInput.addEventListener("change", () => {
-      selectedFiles = Array.from(els.fileInput.files || []);
-      updateFilesUI();
-    });
-
-    els.runBtn.addEventListener("click", runTool);
-    els.clearBtn.addEventListener("click", () => {
-      selectedFiles = [];
-      els.fileInput.value = "";
-      updateFilesUI();
-      setStatus(0, "Ready.", "Choose a tool and upload files.");
-    });
-    els.searchInput.addEventListener("input", e => renderTools(e.target.value));
-    els.selectedTool.addEventListener("change", () => {
-      applyToolOptions();
-      renderTools(els.searchInput.value);
-    });
-
-    renderSelect();
-    applyToolOptions();
-    renderTools("");
-    updateFilesUI();
-    setStatus(0, "Ready.", "Choose a tool and upload files.");
-  </script>
-</body>
-</html>
+          <div className="mt-10 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="grid gap-5">
+              <StatCard title="Files processed" value="18,420" icon={Upload} />
+              <StatCard title="Saved job history" value="2,184" icon={History} />
+              <StatCard title="Success rate" value="99.2%" icon={CheckCircle2} />
+            </div>
+            <ToolGrid />
+          </div>
+        </div>
+      ) : (
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+            <div className="space-y-6">
+              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Welcome back, Sudhanshu</h3>
+                    <p className="text-sm text-slate-500">Your private workspace with user-specific history.</p>
+                  </div>
+                  <Badge tone="success">Files auto-delete</Badge>
+                </div>
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <StatCard title="Recent jobs" value="24" icon={Clock3} />
+                  <StatCard title="Failed jobs" value="1" icon={AlertCircle} />
+                  <StatCard title="Most used" value="OCR Excel" icon={BarChart3} />
+                  <StatCard title="Saved logs" value="Metadata only" icon={ShieldCheck} />
+                </div>
+              </div>
+              <ToolGrid />
+            </div>
+            <HistoryTable />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
