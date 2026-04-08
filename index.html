@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI SaaS Platform</title>
+
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+}
+
+header {
+  padding:20px;
+  text-align:center;
+  background:#020617;
+}
+
+.container {
+  max-width:1200px;
+  margin:auto;
+  padding:20px;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:20px;
+}
+
+.card {
+  background:#1e293b;
+  padding:20px;
+  border-radius:12px;
+}
+
+.drop {
+  border:2px dashed #6366f1;
+  padding:20px;
+  margin-top:10px;
+  text-align:center;
+}
+
+button {
+  margin-top:10px;
+  padding:10px;
+  background:#6366f1;
+  border:none;
+  color:white;
+  cursor:pointer;
+}
+
+.preview {
+  font-size:12px;
+  margin-top:5px;
+  color:#94a3b8;
+}
+</style>
+</head>
+
+<body>
+
+<header>🚀 AI SaaS Platform</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div class="card">
+<input id="email" placeholder="Email">
+<input id="password" type="password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- ADMIN -->
+<div class="card">
+<h3>👑 Admin Panel</h3>
+<button onclick="loadAdmin()">Load Stats</button>
+<p id="admin"></p>
+</div>
+
+<!-- TOOLS -->
+<div class="grid" id="tools"></div>
+
+</div>
+
+<script>
+
+const API = "https://sudhanshu-backend-1937.onrender.com/api";
+let token = localStorage.getItem("token") || "";
+let usageCount = 0;
+
+// LOGIN
+async function login(){
+  const res = await fetch(API+"/auth/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email:email.value,password:password.value})
+  });
+  const data = await res.json();
+  token = data.token;
+  localStorage.setItem("token",token);
+  alert("Logged in");
+}
+
+// ADMIN
+async function loadAdmin(){
+  const res = await fetch(API+"/dashboard/admin");
+  const data = await res.json();
+  admin.innerText = "Users: "+data.totalUsers+" | Usage: "+data.totalUsage;
+}
+
+// TOOL LIST
+const tools = [
+["Merge PDF","merge-pdf",true],
+["OCR","ocr"],
+["AI Excel","excel-ai"]
+];
+
+// RENDER TOOLS
+const container = document.getElementById("tools");
+
+tools.forEach(([name,endpoint,multi])=>{
+  const card=document.createElement("div");
+  card.className="card";
+
+  card.innerHTML=`
+    <h3>${name}</h3>
+    <div class="drop" id="drop-${endpoint}">Drop File Here</div>
+    <input type="file" id="${endpoint}" ${multi?"multiple":""}>
+    <div class="preview" id="preview-${endpoint}"></div>
+    <button onclick="run('${endpoint}',${multi})">Run</button>
+  `;
+
+  container.appendChild(card);
+
+  // DRAG DROP
+  const drop=document.getElementById("drop-"+endpoint);
+  drop.ondragover=e=>e.preventDefault();
+  drop.ondrop=e=>{
+    e.preventDefault();
+    const files=e.dataTransfer.files;
+    document.getElementById(endpoint).files=files;
+    showPreview(endpoint,files);
+  };
+
+  document.getElementById(endpoint).onchange=e=>{
+    showPreview(endpoint,e.target.files);
+  };
+});
+
+// FILE PREVIEW
+function showPreview(id,files){
+  const preview=document.getElementById("preview-"+id);
+  preview.innerHTML=[...files].map(f=>f.name+" ("+(f.size/1024).toFixed(1)+" KB)").join("<br>");
+}
+
+// RUN TOOL
+async function run(endpoint,multi){
+
+  // FREE LIMIT
+  if(usageCount>5){
+    alert("Upgrade to Pro 🔒");
+    return;
+  }
+
+  const input=document.getElementById(endpoint);
+  const form=new FormData();
+
+  if(multi){
+    for(let f of input.files) form.append("files",f);
+  }else{
+    form.append("file",input.files[0]);
+  }
+
+  const res=await fetch(API+"/tools/"+endpoint,{
+    method:"POST",
+    headers:{Authorization:token},
+    body:form
+  });
+
+  usageCount++;
+
+  const type=res.headers.get("content-type");
+
+  if(type.includes("json")){
+    alert(await res.text());
+  }else{
+    const blob=await res.blob();
+    window.open(URL.createObjectURL(blob));
+  }
+}
+
+</script>
+
+</body>
+</html>
