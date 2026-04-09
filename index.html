@@ -201,9 +201,24 @@
   }
   .btn-full:hover { background: var(--accent2); transform: translateY(-1px); }
   .btn-full:active { transform: translateY(0); }
+  .btn-full:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   .msg { font-size: 13px; margin-top: 12px; text-align: center; min-height: 20px; }
   .msg.error { color: var(--danger); }
   .msg.success { color: var(--success); }
+
+  /* ─── FILE SIZE BANNER (shown inside auth modal when triggered by large file) ─── */
+  .size-banner {
+    display: none;
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .size-banner.visible { display: block; }
 
   /* ─── HERO ─── */
   .hero {
@@ -245,6 +260,15 @@
     max-width: 540px;
     margin: 0 auto 32px;
     line-height: 1.7;
+  }
+  .hero-sub {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(63,185,80,0.08);
+    border: 1px solid rgba(63,185,80,0.2);
+    color: var(--success);
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
   }
   .hero-glow {
     position: absolute;
@@ -363,6 +387,19 @@
     line-height: 1.5;
     flex: 1;
   }
+  /* AI badge on tool cards */
+  .tool-badge {
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(168,85,247,0.15);
+    border: 1px solid rgba(168,85,247,0.3);
+    color: #a855f7;
+  }
   .tool-arrow {
     align-self: flex-end;
     color: var(--muted);
@@ -416,6 +453,27 @@
     font-size: 20px; font-weight: 700;
   }
   .tool-modal-header .tinfo p { font-size: 13px; color: var(--muted); }
+
+  /* Login-required notice inside tool modal */
+  .login-required-notice {
+    display: none;
+    margin: 0 28px 0;
+    background: rgba(249,115,22,0.08);
+    border: 1px solid rgba(249,115,22,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--accent);
+    line-height: 1.5;
+  }
+  .login-required-notice.visible { display: block; }
+  .login-required-notice a {
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
   .tool-modal-close {
     margin-left: auto;
     background: var(--surface2);
@@ -463,6 +521,9 @@
   }
   .file-item .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-item .fsize { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+  /* Warn if file is large and not logged in */
+  .file-item.warn-size { border-color: rgba(249,115,22,0.4); }
+  .file-item .size-warn { color: var(--accent); font-size: 11px; }
 
   /* ─── EXTRA INPUTS ─── */
   .extra-inputs { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -627,6 +688,10 @@
     <button class="modal-close" onclick="closeAuth()">✕</button>
     <h2 id="auth-title">Welcome back</h2>
     <p id="auth-sub">Sign in to access all 35 tools</p>
+    <!-- shown when triggered by a large file upload -->
+    <div class="size-banner" id="size-banner">
+      📁 Your file exceeds the 25MB free limit. Create a free account to upload files up to 100MB.
+    </div>
     <div class="tabs">
       <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign in</button>
       <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Register</button>
@@ -644,6 +709,7 @@
   <div class="hero-badge">⚡ 35 Powerful Tools</div>
   <h1>Every file tool<br>you'll ever <em>need.</em></h1>
   <p>PDF, images, Excel, OCR & AI — all in one place. No installs. No limits. Just results.</p>
+  <div class="hero-sub">✓ Free up to 25MB &nbsp;·&nbsp; No login needed for small files</div>
 </div>
 
 <!-- ─── CATEGORY FILTER ─── -->
@@ -670,12 +736,16 @@
       </div>
       <button class="tool-modal-close" onclick="closeToolModal()">✕</button>
     </div>
+    <!-- Login notice shown for AI tools or large files -->
+    <div class="login-required-notice" id="login-notice">
+      🔒 This tool requires a free account. <a onclick="closeToolModal(); openAuth('register')">Create one free</a> or <a onclick="closeToolModal(); openAuth('login')">sign in</a>.
+    </div>
     <div class="tool-modal-body">
       <div class="dropzone" id="tm-dropzone" onclick="triggerFile()">
         <input type="file" id="tm-file-input">
         <div class="dropzone-icon">📂</div>
         <div class="dropzone-text">Drop files here or click to browse</div>
-        <div class="dropzone-sub" id="tm-accept-hint">Accepts any file</div>
+        <div class="dropzone-sub" id="tm-accept-hint">Accepts any file · Free up to 25MB</div>
       </div>
       <div class="file-list" id="tm-file-list"></div>
       <div class="extra-inputs" id="tm-extra"></div>
@@ -708,6 +778,8 @@
 //  CONFIG
 // ═══════════════════════════════════════════════════════
 const API = "https://sudhanshu-backend-1937.onrender.com/api";
+const FREE_LIMIT_MB = 25; // Must match backend
+
 let token = localStorage.getItem("tf_token") || "";
 let currentTool = null;
 let authMode = "login";
@@ -717,45 +789,45 @@ let authMode = "login";
 // ═══════════════════════════════════════════════════════
 const TOOLS = [
   // PDF
-  { id:"merge-pdf",      name:"Merge PDF",         desc:"Combine multiple PDFs into one file.",           icon:"📎", cat:"pdf",     color:"#f97316", multi:true,  accept:".pdf",  extra:[] },
-  { id:"split-pdf",      name:"Split PDF",          desc:"Extract specific pages from a PDF.",             icon:"✂️", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"pages",label:"Pages to keep (e.g. 1,3-5)",type:"text",ph:"1,3-5"}] },
-  { id:"compress-pdf",   name:"Compress PDF",       desc:"Reduce PDF file size without quality loss.",     icon:"🗜", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[] },
-  { id:"pdf-to-word",    name:"PDF → Word",         desc:"Convert PDF to an editable .docx file.",        icon:"📝", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[] },
-  { id:"word-to-pdf",    name:"Word → PDF",         desc:"Convert .docx Word document to PDF.",           icon:"🖨", cat:"pdf",     color:"#f97316", multi:false, accept:".docx", extra:[] },
-  { id:"pdf-to-jpg",     name:"PDF → JPG",          desc:"Extract text preview from a PDF page.",         icon:"🖼", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[] },
-  { id:"jpg-to-pdf",     name:"JPG → PDF",          desc:"Bundle JPEG images into a PDF document.",       icon:"📸", cat:"pdf",     color:"#f97316", multi:true,  accept:".jpg,.jpeg", extra:[] },
-  { id:"rotate-pdf",     name:"Rotate PDF",         desc:"Rotate all pages in a PDF by any angle.",       icon:"🔄", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"angle",label:"Rotation angle",type:"select",options:["90","180","270"]}] },
-  { id:"pdf-watermark",  name:"Watermark PDF",      desc:"Stamp a diagonal text watermark on every page.",icon:"💧", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"text",label:"Watermark text",type:"text",ph:"CONFIDENTIAL"}] },
-  { id:"remove-pdf-pages",name:"Remove Pages",      desc:"Delete specific pages from a PDF.",             icon:"🗑", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"pages",label:"Pages to remove (e.g. 2,4-6)",type:"text",ph:"2,4-6"}] },
+  { id:"merge-pdf",      name:"Merge PDF",         desc:"Combine multiple PDFs into one file.",           icon:"📎", cat:"pdf",     color:"#f97316", multi:true,  accept:".pdf",  extra:[], aiOnly:false },
+  { id:"split-pdf",      name:"Split PDF",          desc:"Extract specific pages from a PDF.",             icon:"✂️", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"pages",label:"Pages to keep (e.g. 1,3-5)",type:"text",ph:"1,3-5"}], aiOnly:false },
+  { id:"compress-pdf",   name:"Compress PDF",       desc:"Reduce PDF file size without quality loss.",     icon:"🗜", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[], aiOnly:false },
+  { id:"pdf-to-word",    name:"PDF → Word",         desc:"Convert PDF to an editable .docx file.",        icon:"📝", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[], aiOnly:false },
+  { id:"word-to-pdf",    name:"Word → PDF",         desc:"Convert .docx Word document to PDF.",           icon:"🖨", cat:"pdf",     color:"#f97316", multi:false, accept:".docx", extra:[], aiOnly:false },
+  { id:"pdf-to-jpg",     name:"PDF → JPG",          desc:"Extract text preview from a PDF page.",         icon:"🖼", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[], aiOnly:false },
+  { id:"jpg-to-pdf",     name:"JPG → PDF",          desc:"Bundle JPEG images into a PDF document.",       icon:"📸", cat:"pdf",     color:"#f97316", multi:true,  accept:".jpg,.jpeg", extra:[], aiOnly:false },
+  { id:"rotate-pdf",     name:"Rotate PDF",         desc:"Rotate all pages in a PDF by any angle.",       icon:"🔄", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"angle",label:"Rotation angle",type:"select",options:["90","180","270"]}], aiOnly:false },
+  { id:"pdf-watermark",  name:"Watermark PDF",      desc:"Stamp a diagonal text watermark on every page.",icon:"💧", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"text",label:"Watermark text",type:"text",ph:"CONFIDENTIAL"}], aiOnly:false },
+  { id:"remove-pdf-pages",name:"Remove Pages",      desc:"Delete specific pages from a PDF.",             icon:"🗑", cat:"pdf",     color:"#f97316", multi:false, accept:".pdf",  extra:[{id:"pages",label:"Pages to remove (e.g. 2,4-6)",type:"text",ph:"2,4-6"}], aiOnly:false },
   // Image
-  { id:"resize-image",   name:"Resize Image",       desc:"Resize image to exact width & height in px.",   icon:"📐", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"width",label:"Width (px)",type:"number",ph:"800"},{id:"height",label:"Height (px)",type:"number",ph:"600"}] },
-  { id:"compress-image", name:"Compress Image",     desc:"Reduce image file size with quality control.",  icon:"🗜", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"quality",label:"Quality (1–100)",type:"number",ph:"70"}] },
-  { id:"jpg-to-png",     name:"JPG → PNG",          desc:"Convert JPEG images to transparent PNG.",       icon:"🔁", cat:"image",   color:"#3b82f6", multi:false, accept:".jpg,.jpeg", extra:[] },
-  { id:"png-to-jpg",     name:"PNG → JPG",          desc:"Flatten PNG and convert to JPEG format.",       icon:"🔁", cat:"image",   color:"#3b82f6", multi:false, accept:".png",  extra:[] },
-  { id:"crop-image",     name:"Crop Image",         desc:"Crop image to a specific region (px).",         icon:"✂️", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"left",label:"Left (px)",type:"number",ph:"0"},{id:"top",label:"Top (px)",type:"number",ph:"0"},{id:"width",label:"Width (px)",type:"number",ph:"200"},{id:"height",label:"Height (px)",type:"number",ph:"200"}] },
-  { id:"rotate-image",   name:"Rotate Image",       desc:"Rotate an image by a given angle.",             icon:"🔄", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"angle",label:"Angle (degrees)",type:"number",ph:"90"}] },
-  { id:"image-watermark",name:"Watermark Image",    desc:"Add a diagonal text watermark to an image.",   icon:"💧", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"text",label:"Watermark text",type:"text",ph:"© My Brand"}] },
-  { id:"image-to-pdf",   name:"Image → PDF",        desc:"Convert one or more images into a PDF file.",   icon:"📄", cat:"image",   color:"#3b82f6", multi:true,  accept:"image/*", extra:[] },
+  { id:"resize-image",   name:"Resize Image",       desc:"Resize image to exact width & height in px.",   icon:"📐", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"width",label:"Width (px)",type:"number",ph:"800"},{id:"height",label:"Height (px)",type:"number",ph:"600"}], aiOnly:false },
+  { id:"compress-image", name:"Compress Image",     desc:"Reduce image file size with quality control.",  icon:"🗜", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"quality",label:"Quality (1–100)",type:"number",ph:"70"}], aiOnly:false },
+  { id:"jpg-to-png",     name:"JPG → PNG",          desc:"Convert JPEG images to transparent PNG.",       icon:"🔁", cat:"image",   color:"#3b82f6", multi:false, accept:".jpg,.jpeg", extra:[], aiOnly:false },
+  { id:"png-to-jpg",     name:"PNG → JPG",          desc:"Flatten PNG and convert to JPEG format.",       icon:"🔁", cat:"image",   color:"#3b82f6", multi:false, accept:".png",  extra:[], aiOnly:false },
+  { id:"crop-image",     name:"Crop Image",         desc:"Crop image to a specific region (px).",         icon:"✂️", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"left",label:"Left (px)",type:"number",ph:"0"},{id:"top",label:"Top (px)",type:"number",ph:"0"},{id:"width",label:"Width (px)",type:"number",ph:"200"},{id:"height",label:"Height (px)",type:"number",ph:"200"}], aiOnly:false },
+  { id:"rotate-image",   name:"Rotate Image",       desc:"Rotate an image by a given angle.",             icon:"🔄", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"angle",label:"Angle (degrees)",type:"number",ph:"90"}], aiOnly:false },
+  { id:"image-watermark",name:"Watermark Image",    desc:"Add a diagonal text watermark to an image.",   icon:"💧", cat:"image",   color:"#3b82f6", multi:false, accept:"image/*", extra:[{id:"text",label:"Watermark text",type:"text",ph:"© My Brand"}], aiOnly:false },
+  { id:"image-to-pdf",   name:"Image → PDF",        desc:"Convert one or more images into a PDF file.",   icon:"📄", cat:"image",   color:"#3b82f6", multi:true,  accept:"image/*", extra:[], aiOnly:false },
   // Excel
-  { id:"excel-to-json",  name:"Excel → JSON",       desc:"Convert Excel sheet to JSON data.",             icon:"📊", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx,.xls", extra:[] },
-  { id:"json-to-excel",  name:"JSON → Excel",       desc:"Convert a JSON file to Excel spreadsheet.",    icon:"📋", cat:"excel",   color:"#22c55e", multi:false, accept:".json", extra:[] },
-  { id:"csv-to-excel",   name:"CSV → Excel",        desc:"Convert CSV file to formatted Excel sheet.",   icon:"📑", cat:"excel",   color:"#22c55e", multi:false, accept:".csv",  extra:[] },
-  { id:"excel-remove-duplicates",name:"Remove Duplicates",desc:"Remove duplicate rows from Excel file.", icon:"🧹", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx", extra:[] },
-  { id:"excel-split-sheets",name:"Split by Column", desc:"Split Excel rows into sheets by column value.", icon:"📂", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx", extra:[{id:"column",label:"Column name to split by",type:"text",ph:"Department"}] },
-  { id:"excel-merge-sheets",name:"Merge Sheets",    desc:"Merge multiple Excel files into one sheet.",   icon:"🔗", cat:"excel",   color:"#22c55e", multi:true,  accept:".xlsx", extra:[] },
-  { id:"excel-ai",       name:"Analyze Excel",      desc:"Get row/column stats and numeric analysis.",   icon:"🤖", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx", extra:[] },
+  { id:"excel-to-json",  name:"Excel → JSON",       desc:"Convert Excel sheet to JSON data.",             icon:"📊", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx,.xls", extra:[], aiOnly:false },
+  { id:"json-to-excel",  name:"JSON → Excel",       desc:"Convert a JSON file to Excel spreadsheet.",    icon:"📋", cat:"excel",   color:"#22c55e", multi:false, accept:".json", extra:[], aiOnly:false },
+  { id:"csv-to-excel",   name:"CSV → Excel",        desc:"Convert CSV file to formatted Excel sheet.",   icon:"📑", cat:"excel",   color:"#22c55e", multi:false, accept:".csv",  extra:[], aiOnly:false },
+  { id:"excel-remove-duplicates",name:"Remove Duplicates",desc:"Remove duplicate rows from Excel file.", icon:"🧹", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx", extra:[], aiOnly:false },
+  { id:"excel-split-sheets",name:"Split by Column", desc:"Split Excel rows into sheets by column value.", icon:"📂", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx", extra:[{id:"column",label:"Column name to split by",type:"text",ph:"Department"}], aiOnly:false },
+  { id:"excel-merge-sheets",name:"Merge Sheets",    desc:"Merge multiple Excel files into one sheet.",   icon:"🔗", cat:"excel",   color:"#22c55e", multi:true,  accept:".xlsx", extra:[], aiOnly:false },
+  { id:"excel-ai",       name:"Analyze Excel",      desc:"Get row/column stats and numeric analysis.",   icon:"🤖", cat:"excel",   color:"#22c55e", multi:false, accept:".xlsx", extra:[], aiOnly:true },
   // AI
-  { id:"ocr",            name:"OCR — Extract Text", desc:"Extract text from scanned images using OCR.",  icon:"👁", cat:"ai",      color:"#a855f7", multi:false, accept:"image/*", extra:[] },
-  { id:"summarize-text", name:"Summarize Text",     desc:"AI summary of PDF, DOCX or text files.",       icon:"✨", cat:"ai",      color:"#a855f7", multi:false, accept:".pdf,.docx,.txt", extra:[] },
-  { id:"extract-invoice",name:"Invoice Extractor",  desc:"Auto-extract invoice number, date & total.",   icon:"🧾", cat:"ai",      color:"#a855f7", multi:false, accept:".pdf,.docx,image/*", extra:[] },
-  { id:"parse-resume",   name:"Resume Parser",      desc:"Extract name, email & phone from resume.",     icon:"👤", cat:"ai",      color:"#a855f7", multi:false, accept:".pdf,.docx", extra:[] },
-  { id:"extract-image-text",name:"Image → Text",   desc:"OCR any image and return the raw text.",        icon:"📷", cat:"ai",      color:"#a855f7", multi:false, accept:"image/*", extra:[] },
+  { id:"ocr",            name:"OCR — Extract Text", desc:"Extract text from scanned images using OCR.",  icon:"👁", cat:"ai",      color:"#a855f7", multi:false, accept:"image/*", extra:[], aiOnly:true },
+  { id:"summarize-text", name:"Summarize Text",     desc:"AI summary of PDF, DOCX or text files.",       icon:"✨", cat:"ai",      color:"#a855f7", multi:false, accept:".pdf,.docx,.txt", extra:[], aiOnly:true },
+  { id:"extract-invoice",name:"Invoice Extractor",  desc:"Auto-extract invoice number, date & total.",   icon:"🧾", cat:"ai",      color:"#a855f7", multi:false, accept:".pdf,.docx,image/*", extra:[], aiOnly:true },
+  { id:"parse-resume",   name:"Resume Parser",      desc:"Extract name, email & phone from resume.",     icon:"👤", cat:"ai",      color:"#a855f7", multi:false, accept:".pdf,.docx", extra:[], aiOnly:true },
+  { id:"extract-image-text",name:"Image → Text",   desc:"OCR any image and return the raw text.",        icon:"📷", cat:"ai",      color:"#a855f7", multi:false, accept:"image/*", extra:[], aiOnly:true },
   // Utility
-  { id:"compress-file",  name:"Compress File",      desc:"GZip-compress any file for smaller size.",     icon:"📦", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[] },
-  { id:"rename-file",    name:"Rename File",        desc:"Rename a file and download with new name.",    icon:"✏️", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[{id:"newName",label:"New filename",type:"text",ph:"document-v2.pdf"}] },
-  { id:"extract-zip",    name:"Inspect ZIP",        desc:"List all files inside a ZIP archive.",         icon:"📬", cat:"utility", color:"#06b6d4", multi:false, accept:".zip",  extra:[] },
-  { id:"convert-file",   name:"Convert File",       desc:"Convert Excel to JSON or any file to TXT.",    icon:"🔀", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[{id:"target",label:"Convert to",type:"select",options:["json","txt"]}] },
-  { id:"base64",         name:"Base64 Encode",      desc:"Encode any file to Base64 string.",            icon:"🔐", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[] },
+  { id:"compress-file",  name:"Compress File",      desc:"GZip-compress any file for smaller size.",     icon:"📦", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[], aiOnly:false },
+  { id:"rename-file",    name:"Rename File",        desc:"Rename a file and download with new name.",    icon:"✏️", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[{id:"newName",label:"New filename",type:"text",ph:"document-v2.pdf"}], aiOnly:false },
+  { id:"extract-zip",    name:"Inspect ZIP",        desc:"List all files inside a ZIP archive.",         icon:"📬", cat:"utility", color:"#06b6d4", multi:false, accept:".zip",  extra:[], aiOnly:false },
+  { id:"convert-file",   name:"Convert File",       desc:"Convert Excel to JSON or any file to TXT.",    icon:"🔀", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[{id:"target",label:"Convert to",type:"select",options:["json","txt"]}], aiOnly:false },
+  { id:"base64",         name:"Base64 Encode",      desc:"Encode any file to Base64 string.",            icon:"🔐", cat:"utility", color:"#06b6d4", multi:false, accept:"*",     extra:[], aiOnly:false },
 ];
 
 const CAT_LABELS = {
@@ -800,6 +872,7 @@ function renderTools() {
         <div class="tool-icon" style="background:${alphaColor}">${t.icon}</div>
         <div class="tool-name">${t.name}</div>
         <div class="tool-desc">${t.desc}</div>
+        ${t.aiOnly ? '<div class="tool-badge">Login required</div>' : ''}
         <div class="tool-arrow">→</div>
       `;
       card.onclick = () => openToolModal(t);
@@ -828,19 +901,26 @@ function filterCat(cat) {
 // ═══════════════════════════════════════════════════════
 //  AUTH
 // ═══════════════════════════════════════════════════════
-function openAuth(mode) {
+function openAuth(mode, fromLargeFile = false) {
   authMode = mode;
   switchTab(mode);
+  // Show file size banner if triggered by a large file
+  document.getElementById("size-banner").classList.toggle("visible", fromLargeFile);
   document.getElementById("auth-modal").classList.add("active");
-  document.getElementById("auth-email").focus();
+  setTimeout(() => document.getElementById("auth-email").focus(), 100);
 }
-function closeAuth() { document.getElementById("auth-modal").classList.remove("active"); }
+
+function closeAuth() {
+  document.getElementById("auth-modal").classList.remove("active");
+  document.getElementById("size-banner").classList.remove("visible");
+}
+
 function switchTab(mode) {
   authMode = mode;
   document.getElementById("tab-login").classList.toggle("active", mode === "login");
   document.getElementById("tab-register").classList.toggle("active", mode === "register");
-  document.getElementById("auth-title").textContent = mode === "login" ? "Welcome back" : "Create account";
-  document.getElementById("auth-sub").textContent = mode === "login" ? "Sign in to access all 35 tools" : "Free account · No credit card";
+  document.getElementById("auth-title").textContent = mode === "login" ? "Welcome back" : "Create free account";
+  document.getElementById("auth-sub").textContent = mode === "login" ? "Sign in to continue" : "Free · No credit card required";
   document.getElementById("auth-submit-btn").textContent = mode === "login" ? "Sign in" : "Create account";
   document.getElementById("auth-msg").textContent = "";
   document.getElementById("auth-msg").className = "msg";
@@ -863,19 +943,20 @@ async function submitAuth() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || "Something went wrong");
 
-    if (authMode === "login") {
-      token = data.token;
-      localStorage.setItem("tf_token", token);
-      updateAuthUI(email);
-      closeAuth();
-      toast("Signed in successfully ✓", "success");
-    } else {
-      setMsg(msgEl, "Account created! You can now sign in.", "success");
-      setTimeout(() => switchTab("login"), 1500);
-    }
+    const data = await res.json();
+
+    // ✅ FIX: backend returns { token, email } not { success, token }
+    if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+    // Both login and register return a token — auto-login in both cases
+    token = data.token;
+    localStorage.setItem("tf_token", token);
+    localStorage.setItem("tf_email", data.email || email);
+    updateAuthUI(data.email || email);
+    closeAuth();
+    toast(authMode === "login" ? "Signed in ✓" : "Account created & signed in ✓", "success");
+
   } catch (e) {
     setMsg(msgEl, e.message, "error");
   } finally {
@@ -887,6 +968,7 @@ async function submitAuth() {
 function logout() {
   token = "";
   localStorage.removeItem("tf_token");
+  localStorage.removeItem("tf_email");
   updateAuthUI(null);
   toast("Signed out", "success");
 }
@@ -910,7 +992,6 @@ function setMsg(el, text, type) {
 //  TOOL MODAL
 // ═══════════════════════════════════════════════════════
 function openToolModal(tool) {
-
   currentTool = tool;
 
   // Header
@@ -920,12 +1001,20 @@ function openToolModal(tool) {
   document.getElementById("tm-name").textContent = tool.name;
   document.getElementById("tm-desc").textContent = tool.desc;
 
+  // Show login notice for AI-only tools when not logged in
+  const notice = document.getElementById("login-notice");
+  if (tool.aiOnly && !token) {
+    notice.classList.add("visible");
+  } else {
+    notice.classList.remove("visible");
+  }
+
   // File input
   const fileInput = document.getElementById("tm-file-input");
   fileInput.multiple = !!tool.multi;
   fileInput.accept = tool.accept || "*";
   fileInput.value = "";
-  document.getElementById("tm-accept-hint").textContent = `Accepts: ${tool.accept || "any file"}`;
+  document.getElementById("tm-accept-hint").textContent = `Accepts: ${tool.accept || "any file"} · Free up to ${FREE_LIMIT_MB}MB`;
   document.getElementById("tm-file-list").innerHTML = "";
 
   // Extra inputs
@@ -941,9 +1030,7 @@ function openToolModal(tool) {
     extraEl.appendChild(div);
   }
 
-  // Reset result / status
   resetToolStatus();
-
   document.getElementById("tm-run-label").textContent = `Run — ${tool.name}`;
   document.getElementById("tool-modal").classList.add("active");
 }
@@ -967,7 +1054,6 @@ dz.addEventListener("drop", e => {
   e.preventDefault();
   dz.classList.remove("dragover");
   const fi = document.getElementById("tm-file-input");
-  // Transfer files
   const dt = new DataTransfer();
   for (const f of e.dataTransfer.files) dt.items.add(f);
   fi.files = dt.files;
@@ -978,9 +1064,16 @@ function showFileList(files) {
   const list = document.getElementById("tm-file-list");
   list.innerHTML = "";
   for (const f of files) {
+    const sizeMB = f.size / (1024 * 1024);
+    const isLarge = sizeMB > FREE_LIMIT_MB && !token;
     const item = document.createElement("div");
-    item.className = "file-item";
-    item.innerHTML = `<span>📄</span><span class="fname">${f.name}</span><span class="fsize">${(f.size/1024).toFixed(1)} KB</span>`;
+    item.className = `file-item${isLarge ? " warn-size" : ""}`;
+    item.innerHTML = `
+      <span>📄</span>
+      <span class="fname">${f.name}</span>
+      <span class="fsize">${sizeMB.toFixed(1)} MB</span>
+      ${isLarge ? '<span class="size-warn">⚠ Login needed</span>' : ''}
+    `;
     list.appendChild(item);
   }
 }
@@ -1005,6 +1098,13 @@ async function runTool() {
   const fileInput = document.getElementById("tm-file-input");
   if (!fileInput.files.length) { toast("Please select a file first", "error"); return; }
 
+  // Block AI-only tools upfront if not logged in
+  if (currentTool.aiOnly && !token) {
+    openAuth("register");
+    toast("Please create a free account to use AI tools", "error");
+    return;
+  }
+
   const form = new FormData();
   if (currentTool.multi) {
     for (const f of fileInput.files) form.append("files", f);
@@ -1028,8 +1128,9 @@ async function runTool() {
   resetResult();
 
   try {
+    // ✅ FIX: Send token as "Bearer <token>" so middleware can parse it
     const headers = {};
-    if (token) headers["Authorization"] = token;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const res = await fetch(`${API}/tools/${currentTool.id}`, {
       method: "POST",
@@ -1038,14 +1139,29 @@ async function runTool() {
     });
 
     if (res.status === 401) {
-      token = ""; localStorage.removeItem("tf_token");
+      const errData = await res.json().catch(() => ({}));
+
+      if (errData.requiresLogin) {
+        // ✅ FIX: large file → open register tab with banner, not login
+        closeToolModal();
+        openAuth("register", true);
+        throw new Error(`File exceeds ${FREE_LIMIT_MB}MB free limit. Please create a free account.`);
+      }
+
+      // Token expired
+      token = "";
+      localStorage.removeItem("tf_token");
+      localStorage.removeItem("tf_email");
       updateAuthUI(null);
+      closeToolModal();
       openAuth("login");
       throw new Error("Session expired. Please sign in again.");
     }
+
     if (!res.ok) {
+      // ✅ FIX: backend sends { error: "..." }, not { message: "..." }
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Server error ${res.status}`);
+      throw new Error(err.error || err.message || `Server error ${res.status}`);
     }
 
     const contentType = res.headers.get("content-type") || "";
@@ -1119,16 +1235,25 @@ document.getElementById("tool-modal").addEventListener("click", function(e) {
 });
 
 // ═══════════════════════════════════════════════════════
-//  INIT
+//  INIT — restore session from localStorage
 // ═══════════════════════════════════════════════════════
 renderTools();
 
 if (token) {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    updateAuthUI(payload.email);
-  } catch {
-    token = ""; localStorage.removeItem("tf_token");
+  // ✅ FIX: read email from localStorage (stored on login), not from JWT payload
+  // (JWT payload only has { id }, not email — decoding it won't give email)
+  const savedEmail = localStorage.getItem("tf_email");
+  if (savedEmail) {
+    updateAuthUI(savedEmail);
+  } else {
+    // Fallback: try to decode JWT — if it has email use it, else use placeholder
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      updateAuthUI(payload.email || "user");
+    } catch {
+      token = "";
+      localStorage.removeItem("tf_token");
+    }
   }
 }
 </script>
